@@ -6,7 +6,7 @@ nickname: main account
 	Dying Light: The Beast	0.42	59,99€	144.2h	85.25%
 	Stellar Blade™	0.50	69,99€	139.0h	92.34%
 	Grand Theft Auto V Enhanced	0.19	19,79€	103.2h	81.93%
-	The First Berserker: Khazan	0.36	35,99€	99.8h	83.58%
+	The First Berserker: Khazan	0.36	35,99€	99.8h	83.5%
 	Grand Theft Auto V Legacy	-	No Price	96.5h	87.20%
 	SILENT HILL f	0.94	79,99€	84.9h	79.09%
 	Hollow Knight: Silksong	0.24	19,50€	82.9h	88.66%
