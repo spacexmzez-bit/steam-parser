@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steam Library Finder</title>
+  <style>
+    :root {
+      --bg: #0f141c;
+      --card-bg: #1a2230;
+      --accent: #66c0f4;
+      --accent-hover: #4196c7;
+      --text: #c6d4df;
+      --text-dim: #8b98a5;
+      --highlight: #2a475e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 3rem 1.5rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    p.subtitle {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      background: var(--card-bg);
+      border: 1px solid #2e3a4d;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(102, 192, 244, 0.2);
+    }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .account-card {
+      background: var(--card-bg);
+      border: 1px solid #283445;
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .account-card:hover {
+      border-color: var(--accent);
+    }
+
+    .account-info h3 {
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+
+    .account-info span {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .matched-game {
+      display: inline-block;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: rgba(102, 192, 244, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .copy-btn {
+      background: var(--highlight);
+      border: 1px solid #3c5e79;
+      color: #fff;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+      margin-left: 1rem;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .status-msg {
+      text-align: center;
+      color: var(--text-dim);
+      margin-top: 2rem;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Steam Game Locator</h1>
+    <p class="subtitle">Quickly locate which account owns your games</p>
+  </header>
+
+  <div class="search-wrapper">
+    <input type="text" id="searchInput" placeholder="Search game (e.g. Grand Theft Auto...)" autocomplete="off">
+  </div>
+
+  <div class="results" id="resultsList"></div>
+  <div id="status" class="status-msg"></div>
+</div>
+
+<script>
+  let accounts = [];
+  const searchInput = document.getElementById('searchInput');
+  const resultsList = document.getElementById('resultsList');
+  const statusMsg = document.getElementById('status');
+
+  // Load compiled data
+  fetch('data.json')
+    .then(res => {
+      if (!res.ok) throw new Error("Could not find data.json");
+      return res.json();
+    })
+    .then(data => {
+      accounts = data;
+      statusMsg.textContent = `Indexed ${accounts.length} accounts. Start typing above.`;
+    })
+    .catch(err => {
+      statusMsg.textContent = "Error loading data. Run parser.py first to generate data.json.";
+      console.error(err);
+    });
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    resultsList.innerHTML = '';
+
+    if (!query) {
+      statusMsg.textContent = `Indexed ${accounts.length} accounts. Start typing above.`;
+      return;
+    }
+
+    const matches = [];
+
+    // Search logic handling the new nested title format
+    accounts.forEach(acc => {
+      const foundGame = acc.games.find(g => g.title.toLowerCase().includes(query));
+      if (foundGame) {
+        matches.push({
+          username: acc.username,
+          nickname: acc.nickname,
+          gameTitle: foundGame.title,
+          playtime: foundGame.hours
+        });
+      }
+    });
+
+    if (matches.length === 0) {
+      statusMsg.textContent = "No accounts found containing that game.";
+      return;
+    }
+
+    statusMsg.textContent = `Found on ${matches.length} account${matches.length > 1 ? 's' : ''}:`;
+
+    matches.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'account-card';
+      
+      const playtimeBadge = item.playtime && item.playtime !== "-" 
+        ? ` • ${escapeHtml(item.playtime)}` 
+        : '';
+
+      card.innerHTML = `
+        <div class="account-info">
+          <h3>${escapeHtml(item.nickname)}</h3>
+          <span>ID: @${escapeHtml(item.username)}</span><br>
+          <span class="matched-game">
+            ${escapeHtml(item.gameTitle)}${playtimeBadge}
+          </span>
+        </div>
+        <button class="copy-btn" onclick="copyToClipboard('${escapeJs(item.username)}', this)">Copy Username</button>
+      `;
+      resultsList.appendChild(card);
+    });
+  });
+
+  function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = btn.textContent;
+      btn.textContent = "Copied!";
+      btn.style.background = "#28a745";
+      btn.style.borderColor = "#28a745";
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = "";
+        btn.style.borderColor = "";
+      }, 1500);
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag] || tag));
+  }
+
+  function escapeJs(str) {
+    if (!str) return "";
+    return String(str).replace(/'/g, "\\'");
+  }
+</script>
+
+</body>
+</html>
